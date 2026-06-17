@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kubo × Go2mlt</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fafaf7;}
+  input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+  input[type=number]{-moz-appearance:textfield;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  ::-webkit-scrollbar{width:5px;height:5px;}
+  ::-webkit-scrollbar-track{background:#f1f1f1;}
+  ::-webkit-scrollbar-thumb{background:#c4992a;border-radius:3px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect,useCallback,useRef}=React;
+
+const C={bg:"#fafaf7",sur:"#fff",bor:"#e8e4d9",gold:"#8B6914",gl:"#f5edd6",gm:"#c4992a",navy:"#1a2744",nm:"#2d3f6b",tx:"#1a1a1a",mid:"#4a4a4a",lite:"#888",xlit:"#ccc",red:"#c0392b",rl:"#fdf0ee",green:"#1a6b3a",greenl:"#edf7f1",amber:"#b45309",ambl:"#fef3c7",blue:"#1d4ed8",bluel:"#eff6ff",teal:"#0f766e",teall:"#f0fdfa"};
+const KEY="kubo_v5";
+const TRILHAS=[
+  {id:"gov",nome:"Governança & Dados",resp:"Colpani + Glauco",color:"#2d3f6b",light:"#eef1f8",meses:{junho:"Tags de origem + campos BANT + padrão UTM",julho:"Dashboard único mkt × vendas + alertas de SLA",agosto:"Forecast vivo + handoff dos painéis"}},
+  {id:"qual",nome:"Qualificação & Processo",resp:"Marina + Vendas",color:"#1a6b3a",light:"#edf7f1",meses:{junho:"Critérios MQL/SQL (AND/NOT) + enforcement do playbook",julho:"SLA por etapa + ritual semanal de revisão de calls",agosto:"Win rate consolidado + retrospectiva"}},
+  {id:"dem",nome:"Demanda & Posicionamento",resp:"Marketing",color:"#c0392b",light:"#fdf0ee",meses:{junho:'Reposicionamento "LXP, não biblioteca" + tag indicação',julho:"Programa de referral + cadências por ICP + reativação",agosto:"Hipóteses de A/B priorizadas + setup"}},
+  {id:"dir",nome:"Direção & Sponsor",resp:"Amanda + Carol",color:"#8B6914",light:"#fdf8ec",meses:{junho:"Valida ICP prioritário",julho:"Acompanha cobertura de pipeline (quinzenal)",agosto:"Entrega final + recomendações pós-contrato"}},
+];
+const MESES=["junho","julho","agosto"];
+const SLIST=["não iniciado","em andamento","concluído","bloqueado"];
+const SST={"não iniciado":{bg:"#f3f4f6",color:"#6b7280",dot:"#9ca3af"},"em andamento":{bg:"#fef3c7",color:"#b45309",dot:"#b45309"},"concluído":{bg:"#edf7f1",color:"#1a6b3a",dot:"#1a6b3a"},"bloqueado":{bg:"#fdf0ee",color:"#c0392b",dot:"#c0392b"}};
+const FSTAGES=[{id:"open",label:"Open"},{id:"emcon",label:"Em Contato"},{id:"mql",label:"MQL"},{id:"sql",label:"SQL"},{id:"conv",label:"Convertido"}];
+
+const today=()=>new Date().toISOString().split("T")[0];
+const addD=(s,n)=>{const d=new Date(s+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().split("T")[0];};
+const fmt=s=>{if(!s)return"";const[y,m,d]=s.split("-");return`${d}/${m}/${y}`;};
+const fmtT=()=>new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+const msLbl=ym=>{const[y,m]=ym.split("-");const n=["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];return`${n[+m]}/${y.slice(2)}`;};
+
+function load(){try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}catch(e){}return null;}
+function save(s){try{localStorage.setItem(KEY,JSON.stringify(s));}catch(e){}}
+
+function defState(){
+  const ts={},tn={};
+  TRILHAS.forEach(t=>MESES.forEach(m=>{ts[`${t.id}_${m}`]=(t.id==="dir"&&m==="junho")?"concluído":"não iniciado";tn[`${t.id}_${m}`]="";}));
+  return{opps:"5.7",wr:"22",ts,tn,logs:{}};
+}
+
+const s0={width:"100%",padding:"7px 10px",border:`1px solid ${C.bor}`,borderRadius:6,fontSize:12,fontFamily:"inherit",color:C.tx,background:C.bg,outline:"none",boxSizing:"border-box"};
+function Eye({c}){return<div style={{fontSize:9,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:C.gold,marginBottom:3}}>{c}</div>;}
+function Card({children,sx={}}){return<div style={{background:C.sur,border:`1px solid ${C.bor}`,borderRadius:9,padding:"15px 17px",marginBottom:12,boxShadow:"0 1px 4px rgba(0,0,0,.04)",...sx}}>{children}</div>;}
+function Btn({onClick,children,variant="primary",disabled}){
+  const v={primary:{background:C.navy,color:"#fff"},ghost:{background:"none",border:`1px solid ${C.bor}`,color:C.mid},gold:{background:C.gold,color:"#fff"}};
+  return<button onClick={onClick} disabled={disabled} style={{padding:"6px 14px",borderRadius:6,fontSize:11,fontWeight:700,cursor:disabled?"not-allowed":"pointer",border:"none",fontFamily:"inherit",opacity:disabled?.5:1,...v[variant]}}>{children}</button>;
+}
+
+function Painel({st,set}){
+  const[mes,setMes]=useState("junho");
+  const[nota,setNota]=useState(null);
+  const[ntxt,setNtxt]=useState("");
+  const o=parseFloat(st.opps)||0,w=parseFloat(st.wr)||0;
+  const pO=Math.min((o/14)*100,100),pW=Math.min((w/32)*100,100);
+  const allK=TRILHAS.flatMap(t=>MESES.map(m=>`${t.id}_${m}`));
+  const done=allK.filter(k=>(st.ts[k]||"")==="concluído").length;
+  const pct=Math.round((done/allK.length)*100);
+  const togSt=(tid,m)=>{const k=`${tid}_${m}`;const cur=st.ts[k]||"não iniciado";set(s=>({...s,ts:{...s.ts,[k]:SLIST[(SLIST.indexOf(cur)+1)%SLIST.length]}}));};
+  return(
+    <div style={{maxWidth:960,margin:"0 auto",padding:"16px 14px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div><Eye c="Painel de Metas · Fase 2"/><div style={{fontSize:16,fontWeight:800,color:C.navy,letterSpacing:"-.02em"}}>Combinados do Mês</div></div>
+        <div style={{display:"flex",alignItems:"center",gap:7}}>
+          <div style={{width:110,height:5,background:C.bor,borderRadius:3,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:C.gold,transition:"width .4s"}}/></div>
+          <span style={{fontSize:11,fontWeight:700,color:C.navy}}>{pct}% entregas</span>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:5,marginBottom:14,flexWrap:"wrap"}}>
+        {[["junho","Junho · M2"],["julho","Julho · M3-M4"],["agosto","Agosto · M5"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setMes(v)} style={{padding:"5px 13px",borderRadius:15,border:`1.5px solid ${mes===v?C.gold:C.bor}`,background:mes===v?C.gold:C.sur,color:mes===v?"#fff":C.mid,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
+        ))}
+      </div>
+      <Card>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:160}}>
+            <div style={{background:C.navy,borderRadius:9,padding:"13px 15px",marginBottom:8}}>
+              <div style={{fontSize:8,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:C.gm,marginBottom:6}}>Primária — Pipeline / mês</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:5,marginBottom:8}}><span style={{fontSize:28,fontWeight:900,color:"#fff"}}>{o}</span><span style={{fontSize:10,color:"#8fa3c8"}}>→ meta 14 opps</span></div>
+              <div style={{height:4,background:"rgba(255,255,255,.1)",borderRadius:2,overflow:"hidden"}}><div style={{width:`${pO}%`,height:"100%",background:o>=14?"#34d399":o>=8?C.gm:"#f87171",borderRadius:2,transition:"width .5s"}}/></div>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}><span style={{fontSize:9,color:"#7a8baa"}}>{pO.toFixed(0)}% da meta</span><span style={{fontSize:9,color:"#7a8baa"}}>{o>=14?"✓ meta":o>0?`falta ${(14-o).toFixed(1)}`:""}</span></div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:5}}><span style={{fontSize:10,color:C.lite}}>Atual:</span><input type="number" step="0.1" value={st.opps} onChange={e=>set(s=>({...s,opps:e.target.value}))} style={{...s0,width:65,fontSize:13,fontWeight:600}} onFocus={e=>e.target.style.borderColor=C.gold} onBlur={e=>e.target.style.borderColor=C.bor}/><span style={{fontSize:10,color:C.lite}}>opps/mês</span></div>
+          </div>
+          <div style={{width:1,background:C.bor,alignSelf:"stretch"}}/>
+          <div style={{flex:1,minWidth:160}}>
+            <div style={{background:"#f8f9fc",border:`1px solid ${C.bor}`,borderRadius:9,padding:"13px 15px",marginBottom:8}}>
+              <div style={{fontSize:8,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:C.lite,marginBottom:6}}>Secundária — Win Rate</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:5,marginBottom:8}}><span style={{fontSize:28,fontWeight:900,color:C.navy}}>{w}%</span><span style={{fontSize:10,color:C.lite}}>→ meta 28-32%</span></div>
+              <div style={{height:4,background:C.bor,borderRadius:2,overflow:"hidden"}}><div style={{width:`${pW}%`,height:"100%",background:w>=28?C.green:w>=22?C.amber:C.red,borderRadius:2,transition:"width .5s"}}/></div>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}><span style={{fontSize:9,color:C.lite}}>{w>=28?"✓ zona alvo":`${(28-w).toFixed(0)}pp abaixo`}</span><span style={{fontSize:9,color:C.lite}}>zona: 28-32%</span></div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:5}}><span style={{fontSize:10,color:C.lite}}>Atual:</span><input type="number" step="0.5" value={st.wr} onChange={e=>set(s=>({...s,wr:e.target.value}))} style={{...s0,width:65,fontSize:13,fontWeight:600}} onFocus={e=>e.target.style.borderColor=C.gold} onBlur={e=>e.target.style.borderColor=C.bor}/><span style={{fontSize:10,color:C.lite}}>%</span></div>
+          </div>
+          <div style={{width:1,background:C.bor,alignSelf:"stretch"}}/>
+          <div style={{flex:1,minWidth:130}}>
+            <div style={{fontSize:8,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:C.lite,marginBottom:8}}>Contexto</div>
+            {[["Novos clientes / mês","vs 1,6 real","3"],["NPS do produto","PMF — gap é GTM","9,1"]].map(([l,s,v])=>(
+              <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 9px",borderRadius:6,marginBottom:4,border:`1px solid ${C.bor}`,background:C.bg}}>
+                <div><div style={{fontSize:10,color:C.mid,fontWeight:500}}>{l}</div><div style={{fontSize:8,color:C.lite}}>{s}</div></div>
+                <div style={{fontSize:14,fontWeight:800,color:C.navy}}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+      <div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8,flexWrap:"wrap",gap:5}}>
+          <div><Eye c="Roadmap Fase 2"/><div style={{fontSize:13,fontWeight:700,color:C.navy}}>Trilhas — {mes.charAt(0).toUpperCase()+mes.slice(1)}</div></div>
+          <span style={{fontSize:9,color:C.lite}}>Clique no status para avançar · ✎ nota</span>
+        </div>
+        {TRILHAS.map(t=>{
+          const k=`${t.id}_${mes}`;const status=st.ts[k]||"não iniciado";const notaT=st.tn[k]||"";const ss=SST[status];
+          return(
+            <div key={t.id} style={{background:C.sur,border:`1px solid ${C.bor}`,borderLeft:`4px solid ${t.color}`,borderRadius:"0 8px 8px 0",padding:"10px 13px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:7}}>
+              <div style={{flex:"0 0 145px"}}><div style={{fontSize:11,fontWeight:700,color:t.color,marginBottom:2}}>{t.nome}</div><div style={{fontSize:9,color:C.lite}}>{t.resp}</div></div>
+              <div style={{flex:1,minWidth:155}}>
+                <div style={{background:t.light,border:`1px solid ${t.color}22`,borderRadius:6,padding:"7px 10px",fontSize:11,color:C.mid,lineHeight:1.5}}>{t.meses[mes]}</div>
+                {notaT&&<div style={{marginTop:4,padding:"3px 8px",background:C.gl,border:`1px solid ${C.gold}30`,borderRadius:4,fontSize:9,color:C.gold}}>📝 {notaT}</div>}
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:5}}>
+                <button onClick={()=>togSt(t.id,mes)} style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:16,fontSize:9,fontWeight:600,cursor:"pointer",border:"none",fontFamily:"inherit",background:ss.bg,color:ss.color}}><span style={{width:5,height:5,borderRadius:"50%",background:ss.dot,flexShrink:0}}/>{status}</button>
+                <button onClick={()=>{setNota(k);setNtxt(st.tn[k]||"");}} style={{background:"none",border:`1px solid ${C.bor}`,borderRadius:4,padding:"3px 7px",fontSize:10,color:C.lite,cursor:"pointer",fontFamily:"inherit"}}>✎</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {nota&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setNota(null)}>
+          <div style={{background:C.sur,borderRadius:11,padding:20,width:340,maxWidth:"90vw",boxShadow:"0 20px 50px rgba(0,0,0,.2)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:10}}>Nota · {nota.replace("_"," — ")}</div>
+            <textarea value={ntxt} onChange={e=>setNtxt(e.target.value)} rows={4} style={{...s0,resize:"vertical",marginBottom:10}} onFocus={e=>e.target.style.borderColor=C.gold} onBlur={e=>e.target.style.borderColor=C.bor} placeholder="Contexto, blockers, próximos passos..."/>
+            <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+              <Btn variant="ghost" onClick={()=>setNota(null)}>Cancelar</Btn>
+              <Btn variant="gold" onClick={()=>{set(s=>({...s,tn:{...s.tn,[nota]:ntxt}}));setNota(null);}}>Salvar</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Daily({st,set}){
+  const[date,setDate]=useState(today());
+  const[saved,setSaved]=useState(false);
+  const logs=st.logs||{};
+  const[leads,setLeads]=useState([]);
+  useEffect(()=>setLeads((logs[date]||{}).leads||[]),[date]);
+  const get=k=>(logs[date]||{})[k]||"";
+  const setK=(k,v)=>set(s=>({...s,logs:{...s.logs,[date]:{...(s.logs[date]||{}),[k]:v}}}));
+  const setF=(k,v)=>set(s=>({...s,logs:{...s.logs,[date]:{...(s.logs[date]||{}),funil:{...((s.logs[date]||{}).funil||{}),[k]:v}}}}));
+  const fv=k=>((logs[date]||{}).funil||{})[k]||0;
+  const syncL=ls=>{setLeads(ls);set(s=>({...s,logs:{...s.logs,[date]:{...(s.logs[date]||{}),leads:ls}}})};};
+  const TIPOS=["outbound","inbound"],STSL=["Open","Em Contato","MQL","SQL","Conv"],TEMPS=["frio","morno","quente"];
+  const cycL=(i,f)=>{const ls=[...leads];if(f==="tipo"){const a=TIPOS;ls[i]={...ls[i],tipo:a[(a.indexOf(ls[i].tipo)+1)%a.length]};}if(f==="status"){const a=STSL;ls[i]={...ls[i],status:a[(a.indexOf(ls[i].status)+1)%a.length]};}if(f==="temp"){const a=TEMPS;ls[i]={...ls[i],temp:a[(a.indexOf(ls[i].temp)+1)%a.length]};}syncL(ls);};
+  return(
+    <div style={{maxWidth:760,margin:"0 auto",padding:"16px 14px"}}>
+      <div style={{marginBottom:12}}><Eye c="Daily Log"/><div style={{fontSize:16,fontWeight:800,color:C.navy}}>Registro do Dia</div></div>
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+        <button onClick={()=>setDate(addD(date,-1))} style={{...s0,width:"auto",padding:"4px 9px",cursor:"pointer",fontSize:10}}>← Ant.</button>
+        <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{...s0,width:"auto",padding:"4px 8px",fontSize:11}} onFocus={e=>e.target.style.borderColor=C.gold} onBlur={e=>e.target.style.borderColor=C.bor}/>
+        <button onClick={()=>setDate(today())} style={{...s0,width:"auto",padding:"4px 9px",cursor:"pointer",fontSize:10,background:C.navy,color:"#fff",border:"none"}}>Hoje</button>
+        <button onClick={()=>setDate(addD(date,1))} style={{...s0,width:"auto",padding:"4px 9px",cursor:"pointer",fontSize:10}}>Próx. →</button>
+      </div>
+      <Card>
+        <Eye c="Atividades de Prospecção"/>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(105px,1fr))",gap:7,marginTop:8}}>
+          {[["liga","📞","Ligações","tentativas"],["conec","✅","Conectadas","contato"],["email","📧","E-mails","enviados"],["wpp","💬","WhatsApp","msg"],["reun","📅","Reuniões","agendadas"],["demo","🎯","Demos","realizadas"]].map(([k,e,l,h])=>(
+            <div key={k} style={{background:C.bg,border:`1px solid ${C.bor}`,borderRadius:6,padding:"8px 10px",display:"flex",flexDirection:"column",gap:3}}>
+              <div style={{fontSize:15}}>{e}</div>
+              <div style={{fontSize:8,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",color:C.lite}}>{l}</div>
+              <input type="number" min="0" value={get(k)} onChange={e=>setK(k,e.target.value)} placeholder="0" style={{fontSize:20,fontWeight:800,color:C.navy,border:"none",background:"transparent",outline:"none",width:"100%",fontFamily:"inherit"}}/>
+              <div style={{fontSize:8,color:C.xlit}}>{h}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card>
+        <Eye c="Movimentação do Funil"/>
+        <div style={{display:"flex",gap:5,marginTop:8,marginBottom:7,flexWrap:"wrap"}}>
+          {FSTAGES.map((s,i)=>(
+            <div key={s.id} style={{flex:1,minWidth:58,background:C.bg,border:`1px solid ${C.bor}`,borderRadius:6,padding:"7px 9px",textAlign:"center",position:"relative"}}>
+              <input type="number" min="0" value={fv(s.id)} onChange={e=>setF(s.id,e.target.value)} style={{fontSize:18,fontWeight:900,color:C.navy,border:"none",background:"transparent",outline:"none",width:"100%",textAlign:"center",fontFamily:"inherit"}}/>
+              <div style={{fontSize:8,fontWeight:600,color:C.lite,textTransform:"uppercase",letterSpacing:".04em",marginTop:1}}>{s.label}</div>
+              {i<FSTAGES.length-1&&<div style={{position:"absolute",right:-7,top:"50%",transform:"translateY(-50%)",fontSize:10,color:C.xlit}}>→</div>}
+            </div>
+          ))}
+        </div>
+        <div style={{fontSize:9,color:C.lite}}>SLA: MQL 48h · SQL 30d · Aberta 90d · Demo 30d · Neg. 45d</div>
+      </Card>
+      <Card>
+        <Eye c="Leads Trabalhados Hoje"/>
+        <div style={{marginTop:8}}>
+          {leads.map((lr,i)=>(
+            <div key={i} style={{display:"flex",gap:5,alignItems:"center",padding:"5px 8px",background:C.bg,border:`1px solid ${C.bor}`,borderRadius:5,marginBottom:4,flexWrap:"wrap"}}>
+              <input value={lr.empresa||""} onChange={e=>{const ls=[...leads];ls[i]={...ls[i],empresa:e.target.value};syncL(ls);}} placeholder="Empresa..." style={{...s0,flex:1,minWidth:80,padding:"2px 5px",fontSize:11}} onFocus={e=>e.target.style.borderColor=C.gold} onBlur={e=>e.target.style.borderColor=C.bor}/>
+              <button onClick={()=>cycL(i,"tipo")} style={{padding:"2px 6px",borderRadius:9,border:`1px solid ${lr.tipo==="inbound"?C.blue:C.teal}`,background:lr.tipo==="inbound"?C.bluel:C.teall,color:lr.tipo==="inbound"?C.blue:C.teal,fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{lr.tipo==="inbound"?"Inbound":"Outbound"}</button>
+              <button onClick={()=>cycL(i,"status")} style={{padding:"2px 6px",borderRadius:9,border:`1px solid ${C.bor}`,background:C.bg,color:C.mid,fontSize:8,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{lr.status||"MQL"}</button>
+              <button onClick={()=>cycL(i,"temp")} style={{padding:"2px 6px",borderRadius:9,border:`1px solid ${lr.temp==="quente"?"#f87171":lr.temp==="morno"?C.amber:"#93c5fd"}`,background:lr.temp==="quente"?"#fff1f0":lr.temp==="morno"?C.ambl:C.bluel,color:lr.temp==="quente"?C.red:lr.temp==="morno"?C.amber:C.blue,fontSize:8,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{lr.temp==="quente"?"🔥":lr.temp==="morno"?"🌤":"❄️"} {lr.temp||"morno"}</button>
+              <button onClick={()=>syncL(leads.filter((_,j)=>j!==i))} style={{background:"none",border:"none",color:C.xlit,cursor:"pointer",fontSize:12}}>✕</button>
+            </div>
+          ))}
+          <button onClick={()=>syncL([...leads,{empresa:"",tipo:"outbound",status:"MQL",temp:"morno"}])} style={{width:"100%",padding:"5px",border:`1.5px dashed ${C.bor}`,borderRadius:5,background:"none",fontSize:10,color:C.lite,cursor:"pointer",fontFamily:"inherit",marginTop:4}}>+ Adicionar empresa</button>
+        </div>
+      </Card>
+      <Card>
+        <Eye c="Nota do Dia / Blockers"/>
+        <textarea value={get("nota")} onChange={e=>setK("nota",e.target.value)} placeholder="O que travou? O que foi bem? Leads quentes? Insights..." rows={3} style={{...s0,resize:"vertical",marginTop:6,marginBottom:10}} onFocus={e=>e.target.style.borderColor=C.gold} onBlur={e=>e.target.style.borderColor=C.bor}/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:9,color:C.lite}}>✦ Salvo localmente no navegador</div>
+          <button onClick={()=>{setSaved(true);setTimeout(()=>setSaved(false),2500);}} style={{background:saved?C.green:C.navy,border:"none",borderRadius:6,color:"#fff",fontSize:11,fontWeight:700,padding:"7px 18px",cursor:"pointer",fontFamily:"inherit"}}>{saved?"✓ Confirmado!":"💾 Confirmar log"}</button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function Historico({st}){
+  const[period,setPeriod]=useState("30");
+  const[hFrom,setHFrom]=useState(addD(today(),-30));
+  const[hTo,setHTo]=useState(today());
+  const logs=st.logs||{};
+  const filtered=Object.keys(logs).sort().filter(d=>{
+    if(hFrom&&hTo)return d>=hFrom&&d<=hTo;
+    if(period==="all")return true;
+    return d>=addD(today(),-parseInt(period))&&d<=today();
+  }).map(d=>({date:d,...logs[d]}));
+  const hoje=today(),ma=hoje.slice(0,7);
+  const meses=[addD(hoje,-60).slice(0,7),addD(hoje,-30).slice(0,7),ma].filter((v,i,a)=>a.indexOf(v)===i);
+  const calcPipe=ym=>Object.keys(logs).filter(d=>d.slice(0,7)===ym).reduce((s,d)=>s+(parseInt((logs[d]?.funil||{}).conv)||0),0);
+  const c30=addD(hoje,-30);
+  const pipe30=Object.keys(logs).filter(d=>d>=c30&&d<=hoje).reduce((s,d)=>s+(parseInt((logs[d]?.funil||{}).conv)||0),0);
+  const sem=(v,m,b)=>{
+    if(v===null||v===undefined)return{txt:"Sem dados",cl:"#fbbf24",bg:"rgba(180,83,9,.18)"};
+    if(v>=m)return{txt:"✓ Meta",cl:"#34d399",bg:"rgba(26,107,58,.18)"};
+    if(v>=b)return{txt:"Em progresso",cl:"#fbbf24",bg:"rgba(180,83,9,.18)"};
+    return{txt:"⚠ Zona de risco",cl:"#f87171",bg:"rgba(192,57,43,.18)"};
+  };
+  const tot=k=>filtered.reduce((s,d)=>s+(parseInt(d[k])||0),0);
+  const totL=filtered.reduce((s,d)=>s+(d.leads||[]).length,0);
+  const rec=filtered.slice(-14);
+  const maxV=Math.max(...rec.map(d=>(parseInt(d.liga)||0)+(parseInt(d.email)||0)+(parseInt(d.wpp)||0)),1);
+  const funil={};FSTAGES.forEach(s=>funil[s.id]=0);
+  filtered.forEach(d=>{if(d.funil)FSTAGES.forEach(s=>funil[s.id]+=(parseInt(d.funil[s.id])||0));});
+  const exportCSV=()=>{
+    const rows=[["Data","Lig","Conec","Email","WPP","Reun","Demo","Leads","Nota"]];
+    filtered.forEach(d=>rows.push([d.date,d.liga||0,d.conec||0,d.email||0,d.wpp||0,d.reun||0,d.demo||0,(d.leads||[]).length,(d.nota||"").replace(/,/g,";")]));
+    const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(rows.map(r=>r.join(",")).join("\n"));a.download=`kubo_${hoje}.csv`;a.click();
+  };
+  return(
+    <div style={{maxWidth:960,margin:"0 auto",padding:"16px 14px"}}>
+      <div style={{marginBottom:14}}><Eye c="Histórico"/><div style={{fontSize:16,fontWeight:800,color:C.navy}}>Evolução da Consultoria</div><div style={{fontSize:11,color:C.lite,marginTop:2}}>Calculado automaticamente dos logs diários</div></div>
+      <div style={{display:"flex",gap:7,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+        <select value={period} onChange={e=>{setPeriod(e.target.value);if(e.target.value!=="all"){setHFrom(addD(today(),-parseInt(e.target.value)));setHTo(today());}}} style={{...s0,width:"auto",fontSize:11,padding:"5px 9px"}}>
+          <option value="7">Últimos 7 dias</option><option value="14">Últimos 14 dias</option>
+          <option value="30">Últimos 30 dias</option><option value="all">Todo o período</option>
+        </select>
+        <input type="date" value={hFrom} onChange={e=>setHFrom(e.target.value)} style={{...s0,width:"auto",fontSize:11,padding:"5px 9px"}} onFocus={e=>e.target.style.borderColor=C.gold} onBlur={e=>e.target.style.borderColor=C.bor}/>
+        <span style={{fontSize:11,color:C.lite}}>até</span>
+        <input type="date" value={hTo} onChange={e=>setHTo(e.target.value)} style={{...s0,width:"auto",fontSize:11,padding:"5px 9px"}} onFocus={e=>e.target.style.borderColor=C.gold} onBlur={e=>e.target.style.borderColor=C.bor}/>
+        <button onClick={exportCSV} style={{...s0,width:"auto",padding:"5px 11px",cursor:"pointer",fontSize:11}}>⬇ CSV</button>
+      </div>
+      <div style={{background:C.navy,borderRadius:10,padding:"18px 20px",marginBottom:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:C.gm}}>🎯 Métricas-Norte</div>
+          <span style={{fontSize:8,fontWeight:700,background:"rgba(52,211,153,.15)",color:"#34d399",padding:"2px 7px",borderRadius:9}}>⚡ AUTO — lido dos logs diários</span>
+        </div>
+        <div style={{fontSize:9,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"#8fa3c8",marginBottom:8}}>Pipeline criado / mês · campo "Convertido" do funil diário</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
+          {meses.map(ym=>{
+            const pipe=calcPipe(ym);const ia=ym===ma;const sp=sem(pipe,14,8);const pp=Math.min((pipe/14)*100,100);
+            return(
+              <div key={ym} style={{background:ia?"rgba(196,153,42,.12)":"rgba(255,255,255,.06)",border:`1px solid ${ia?"rgba(196,153,42,.3)":"rgba(255,255,255,.08)"}`,borderRadius:7,padding:"12px 13px"}}>
+                <div style={{fontSize:8,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"#8fa3c8",marginBottom:7,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  {msLbl(ym)}{ia&&<span style={{fontSize:7,background:C.gm,color:"#fff",padding:"1px 5px",borderRadius:5}}>ATUAL</span>}
+                </div>
+                <div style={{fontSize:26,fontWeight:900,color:"#fff",letterSpacing:"-.03em",marginBottom:3}}>{pipe}</div>
+                <div style={{fontSize:8,color:"#8fa3c8",marginBottom:7}}>conversões · meta: 14</div>
+                <div style={{height:3,background:"rgba(255,255,255,.1)",borderRadius:2,overflow:"hidden",marginBottom:5}}><div style={{width:`${pp}%`,height:"100%",background:sp.cl,borderRadius:2}}/></div>
+                <div style={{display:"inline-flex",fontSize:8,fontWeight:700,padding:"2px 7px",borderRadius:8,background:sp.bg,color:sp.cl}}>{sp.txt}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:12}}>
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"#8fa3c8",marginBottom:8}}>Últimos 30 dias · tendência rolante</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+            {[
+              ["Pipeline 30d",pipe30,"conversões",sem(pipe30,14,8)],
+              ["Win Rate atual",`${parseFloat(st.wr)||0}%`,"painel manual",sem(parseFloat(st.wr)||0,28,22)],
+              ["Estimativa",`${(pipe30*((parseFloat(st.wr)||0)/100)).toFixed(1)}`,`clientes/mês · meta: 3`,sem(+(pipe30*((parseFloat(st.wr)||0)/100)).toFixed(1),3,1)],
+              ["Referência","14 opps","28-32% WR · 3 cli/mês",{txt:"metas Fase 2",cl:"#8fa3c8",bg:"rgba(255,255,255,.08)"}],
+            ].map(([l,v,s2,sp])=>(
+              <div key={l} style={{background:"rgba(255,255,255,.05)",borderRadius:7,padding:"10px 12px"}}>
+                <div style={{fontSize:8,color:"#8fa3c8",textTransform:"uppercase",letterSpacing:".04em",marginBottom:3}}>{l}</div>
+                <div style={{fontSize:20,fontWeight:900,color:"#fff",letterSpacing:"-.03em"}}>{v}</div>
+                <div style={{fontSize:8,color:"#8fa3c8",marginTop:1,marginBottom:7}}>{s2}</div>
+                <div style={{display:"inline-flex",fontSize:8,fontWeight:700,padding:"2px 7px",borderRadius:8,background:sp.bg,color:sp.cl}}>{sp.txt}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:8,marginBottom:14}}>
+        {[["Ligações",tot("liga"),"tentativas"],["Conectadas",tot("conec"),"contato"],["E-mails",tot("email"),"enviados"],["WhatsApp",tot("wpp"),"msg"],["Reuniões",tot("reun"),"agendadas"],["Demos",tot("demo"),"realizadas"],["Leads",totL,"trabalhados"],["Dias",filtered.length,"com log"]].map(([l,v,s])=>(
+          <div key={l} style={{background:C.sur,border:`1px solid ${C.bor}`,borderRadius:9,padding:"11px 13px"}}>
+            <div style={{fontSize:8,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",color:C.lite,marginBottom:4}}>{l}</div>
+            <div style={{fontSize:22,fontWeight:900,color:C.navy,letterSpacing:"-.03em"}}>{v}</div>
+            <div style={{fontSize:8,color:C.lite,marginTop:2}}>{s}</div>
+          </div>
+        ))}
+      </div>
+      <Card>
+        <div style={{fontSize:12,fontWeight:700,color:C.navy,marginBottom:12}}>Atividade diária — Lig. + Email + WPP</div>
+        <div style={{display:"flex",alignItems:"flex-end",gap:3,height:90,paddingTop:5}}>
+          {rec.length?rec.map(d=>{const v=(parseInt(d.liga)||0)+(parseInt(d.email)||0)+(parseInt(d.wpp)||0);const h=Math.max((v/maxV)*90,3);return(
+            <div key={d.date} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+              {v>0&&<div style={{fontSize:7,color:C.mid,fontWeight:700}}>{v}</div>}
+              <div style={{width:"100%",height:`${h}px`,background:C.navy,borderRadius:"2px 2px 0 0",minHeight:3}}/>
+              <div style={{fontSize:7,color:C.lite,fontWeight:600,whiteSpace:"nowrap"}}>{fmt(d.date).slice(0,5)}</div>
+            </div>
+          );}:<div style={{color:C.lite,fontSize:11,padding:14,textAlign:"center",width:"100%"}}>Nenhum dado. Preencha o Daily Log!</div>}
+        </div>
+      </Card>
+      <Card>
+        <div style={{fontSize:12,fontWeight:700,color:C.navy,marginBottom:10}}>Funil Acumulado · {filtered.length} dias</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {FSTAGES.map((s,i)=>(
+            <React.Fragment key={s.id}>
+              <div style={{flex:1,minWidth:55,background:C.bg,border:`1px solid ${C.bor}`,borderRadius:7,padding:"8px 10px",textAlign:"center"}}>
+                <div style={{fontSize:20,fontWeight:900,color:C.navy}}>{funil[s.id]}</div>
+                <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:".03em",color:C.lite,marginTop:2}}>{s.label}</div>
+              </div>
+              {i<FSTAGES.length-1&&<div style={{alignSelf:"center",color:C.xlit,fontSize:11}}>→</div>}
+            </React.Fragment>
+          ))}
+        </div>
+        <div style={{fontSize:9,color:C.lite,marginTop:8}}>💡 "Convertido" alimenta o cálculo de pipeline/mês acima.</div>
+      </Card>
+      <div style={{background:C.sur,border:`1px solid ${C.bor}`,borderRadius:9,overflow:"hidden",marginBottom:20}}>
+        <div style={{padding:"10px 15px",borderBottom:`1px solid ${C.bor}`,fontSize:12,fontWeight:700,color:C.navy}}>Log por dia</div>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+            <thead><tr>{["Data","📞","✅","📧","💬","📅","🎯","Leads","Nota"].map(h=><th key={h} style={{textAlign:"left",padding:"6px 9px",fontSize:9,fontWeight:700,letterSpacing:".05em",textTransform:"uppercase",color:C.lite,borderBottom:`2px solid ${C.bor}`,background:C.bg}}>{h}</th>)}</tr></thead>
+            <tbody>
+              {!filtered.length
+                ?<tr><td colSpan={9} style={{textAlign:"center",padding:26,color:C.lite,fontSize:12}}>Nenhum registro. Comece pelo Daily Log!</td></tr>
+                :[...filtered].reverse().map(d=>(
+                  <tr key={d.date}>
+                    <td style={{padding:"6px 9px",fontWeight:600,whiteSpace:"nowrap",color:C.tx,borderBottom:`1px solid ${C.bor}`}}>{fmt(d.date)}</td>
+                    {["liga","conec","email","wpp","reun","demo"].map(k=><td key={k} style={{padding:"6px 9px",fontWeight:700,color:C.navy,textAlign:"center",borderBottom:`1px solid ${C.bor}`}}>{d[k]||0}</td>)}
+                    <td style={{padding:"6px 9px",fontWeight:700,color:C.navy,textAlign:"center",borderBottom:`1px solid ${C.bor}`}}>{(d.leads||[]).length}</td>
+                    <td style={{padding:"6px 9px",maxWidth:130,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:10,color:C.mid,borderBottom:`1px solid ${C.bor}`}}>{d.nota||"—"}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const[tab,setTab]=useState("painel");
+  const[st,setRaw]=useState(null);
+  const[loaded,setLoaded]=useState(false);
+  const[ts,setTs]=useState("");
+  const ref=useRef(null);
+
+  useEffect(()=>{
+    const d=load();
+    setRaw(d||defState());
+    setLoaded(true);
+    setTs(fmtT());
+  },[]);
+
+  const set=useCallback(fn=>{
+    setRaw(prev=>{
+      const next=typeof fn==="function"?fn(prev):fn;
+      clearTimeout(ref.current);
+      ref.current=setTimeout(()=>{save(next);setTs(fmtT());},300);
+      return next;
+    });
+  },[]);
+
+  if(!loaded)return(
+    <div style={{minHeight:"100vh",background:C.navy,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:14}}>
+      <div style={{fontSize:20,fontWeight:800,color:"#fff"}}>Kubo <span style={{color:C.gm}}>×</span> Go2mlt</div>
+      <div style={{width:32,height:32,border:`3px solid ${C.gm}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+    </div>
+  );
+
+  const TABS=[{id:"painel",label:"🎯 Combinados"},{id:"daily",label:"📋 Daily Log"},{id:"historico",label:"📈 Histórico"}];
+  return(
+    <div style={{minHeight:"100vh",background:C.bg}}>
+      <div style={{background:C.navy,borderBottom:`3px solid ${C.gold}`,padding:"0 14px",height:48,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,gap:8}}>
+        <div style={{fontSize:12,fontWeight:800,color:"#fff",whiteSpace:"nowrap",flexShrink:0}}>Kubo <span style={{color:C.gm}}>×</span> Go2mlt</div>
+        <div style={{display:"flex",gap:2}}>
+          {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"4px 10px",borderRadius:13,border:"none",background:tab===t.id?C.gold:"transparent",color:tab===t.id?"#fff":"#8fa3c8",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{t.label}</button>)}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+          {ts&&<span style={{fontSize:9,color:"#34d399"}}>✓ {ts}</span>}
+          <div style={{width:6,height:6,borderRadius:"50%",background:"#34d399"}}/>
+        </div>
+      </div>
+      {tab==="painel"   &&<Painel    st={st} set={set}/>}
+      {tab==="daily"    &&<Daily     st={st} set={set}/>}
+      {tab==="historico"&&<Historico st={st}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
