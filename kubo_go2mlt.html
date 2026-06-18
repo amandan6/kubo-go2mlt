@@ -250,7 +250,7 @@ async function cloudLoad(manual){
   }catch(e){
     setSS("error","Sem conexão");
     hideLoading();
-    if(!manual && !SCRIPT_URL) showSetup();
+    // URL fixa — não abre settings no erro, só mostra status
   }
 }
 
@@ -319,7 +319,6 @@ function saveURLModal(){
   const url=document.getElementById("url-input-modal").value.trim();
   if(!url){alert("Cole a URL do Apps Script.");return;}
   SCRIPT_URL=url;
-  localStorage.setItem("kubo_script_url",url);
   const st=document.getElementById("url-status");
   st.style.display="block"; st.style.color="#1a6b3a"; st.textContent="✓ URL salva! Conectando...";
   setTimeout(()=>{
@@ -329,8 +328,7 @@ function saveURLModal(){
 }
 function showSetup(){
   hideLoading();
-  openSettings();
-  setSS("off","Não conectado");
+  setSS("error","Erro ao conectar — tente novamente");
 }
 function hideLoading(){document.getElementById("loading-overlay").style.display="none";}
 function useOffline(){
