@@ -57,9 +57,9 @@ td{padding:5px 8px;border-bottom:1px solid #f0ede6;color:#1a1a1a;}
 <div style="background:#1a2744;border-bottom:3px solid #8B6914;padding:0 14px;height:46px;display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:100;">
   <div style="font-size:12px;font-weight:800;color:#fff;white-space:nowrap;">Kubo <span style="color:#c4992a;">×</span> Go2mlt</div>
   <div style="display:flex;gap:3px;">
-    <button class="tab on" onclick="goTab('painel',this)">🎯 Combinados</button>
-    <button class="tab" onclick="goTab('daily',this)">📋 Daily Log</button>
-    <button class="tab" onclick="goTab('hist',this)">📈 Histórico</button>
+    <button class="tab on" onclick="goTab('painel',this)" data-tabid="painel">🎯 Combinados</button>
+    <button class="tab" onclick="goTab('daily',this)" data-tabid="daily">📋 Daily Log</button>
+    <button class="tab" onclick="goTab('hist',this)" data-tabid="hist">📈 Histórico</button>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <div id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#aaa;flex-shrink:0;"></div>
@@ -250,9 +250,12 @@ async function cloudLoad(manual){
     }
     setSS("ok","Sincronizado "+fmtT());
     hideLoading();
-    renderPainel();
-    renderDaily();
-    if(manual) renderHist();
+    // Re-render a aba ativa
+    const activeTab = document.querySelector(".tab.on");
+    const tabId = activeTab ? activeTab.dataset.tabid : "painel";
+    if(tabId==="daily") renderDaily();
+    else if(tabId==="hist") renderHist();
+    else renderPainel();
   }catch(e){
     setSS("error","Sem conexão");
     hideLoading();
@@ -371,9 +374,9 @@ function goTab(t,btn){
   document.getElementById("pg-"+t).classList.add("active");
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("on"));
   btn.classList.add("on");
-  if(t==="painel"){renderPainel();}
-  if(t==="daily"){renderDaily();}
-  if(t==="hist"){cloudLoad(true);}
+  if(t==="painel") renderPainel();
+  if(t==="daily")  renderDaily();
+  if(t==="hist")  { renderHist(); if(SCRIPT_URL) cloudLoad(false); }
 }
 
 // ── PAINEL ────────────────────────────────────────────
