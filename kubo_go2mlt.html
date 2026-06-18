@@ -30,21 +30,17 @@ table{width:100%;border-collapse:collapse;font-size:11px;}
 th{text-align:left;padding:5px 8px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#aaa;border-bottom:2px solid #e2ddd2;background:#f8f6f0;}
 td{padding:5px 8px;border-bottom:1px solid #f0ede6;color:#1a1a1a;}
 #loading-overlay{position:fixed;inset:0;background:#1a2744;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:999;}
-#setup-banner{background:#fff8e1;border:1px solid #f0c040;border-radius:8px;padding:14px 16px;margin:12px 12px 0;display:none;}
 </style>
 </head>
 <body>
 
 <!-- LOADING -->
-<div id="loading-overlay">
+<div id="loading-overlay" style="display:none;">
   <div style="font-size:20px;font-weight:800;color:#fff;">Kubo <span style="color:#c4992a;">×</span> Go2mlt</div>
   <div style="width:32px;height:32px;border:3px solid #c4992a;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div>
-  <div id="loading-msg" style="font-size:11px;color:#8fa3c8;">Conectando ao Google Sheets...</div>
+  <div id="loading-msg" style="font-size:11px;color:#8fa3c8;">Carregando...</div>
 </div>
 
-<!-- SETUP -->
-<div id="setup-banner">
-  <div style="font-weight:700;color:#7a5c00;font-size:13px;margin-bottom:6px;">⚙️ Configure a URL do Google Apps Script</div>
   <div style="font-size:11px;color:#5a4200;margin-bottom:10px;">Siga o arquivo <strong>LEIA_PRIMEIRO.md</strong>, crie a API gratuita no Google e cole a URL abaixo. Todos do time usam a mesma URL.</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
     <input id="url-input" type="text" placeholder="https://script.google.com/macros/s/..." style="flex:1;min-width:220px;padding:7px 10px;border:1px solid #f0c040;border-radius:6px;font-size:11px;font-family:inherit;outline:none;background:#fff;color:#1a1a1a;"/>
@@ -69,7 +65,7 @@ td{padding:5px 8px;border-bottom:1px solid #f0ede6;color:#1a1a1a;}
 </div>
 
 <!-- MODAL CONFIGURAÇÕES -->
-<div id="settings-modal" class="modal-bg" style="display:none;">
+<div id="settings-modal" class="modal-bg" style="display:none;" onclick="if(event.target===this)closeSettings()">
   <div class="modal" style="width:400px;" onclick="event.stopPropagation()">
     <div style="font-size:14px;font-weight:800;color:#1a2744;margin-bottom:4px;">⚙️ Configurações</div>
     <div style="font-size:11px;color:#aaa;margin-bottom:14px;">Conecte ao Google Sheets para sincronizar com o time</div>
@@ -78,7 +74,6 @@ td{padding:5px 8px;border-bottom:1px solid #f0ede6;color:#1a1a1a;}
     <div style="font-size:10px;color:#aaa;margin-bottom:14px;">Siga o <strong>LEIA_PRIMEIRO.md</strong> para gerar essa URL gratuitamente no Google Apps Script. Todos do time usam a mesma URL.</div>
     <div id="url-status" style="font-size:10px;margin-bottom:12px;display:none;"></div>
     <div style="display:flex;gap:6px;justify-content:space-between;flex-wrap:wrap;">
-      <button onclick="clearURL()" style="padding:6px 12px;border:1px solid #e2ddd2;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:#fff;color:#c0392b;font-family:inherit;">🗑 Desconectar</button>
       <div style="display:flex;gap:6px;">
         <button class="ghost" onclick="closeSettings()">Cancelar</button>
         <button class="goldbtn" onclick="saveURLModal()">Salvar e conectar</button>
@@ -192,7 +187,8 @@ td{padding:5px 8px;border-bottom:1px solid #f0ede6;color:#1a1a1a;}
 // ════════════════════════════════════════════════════
 // CONFIG — URL do Apps Script (salva por navegador)
 // ════════════════════════════════════════════════════
-let SCRIPT_URL = localStorage.getItem("kubo_script_url") || "";
+// URL fixa — todos conectam automaticamente
+let SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJx11n6FkILUcT5q8rnQNDiF8smFlzOH-ZKfNR1dmm00yQcHtg5th4lpSuca5JLgzi/exec";
 
 // ── CONSTANTES ───────────────────────────────────────
 const TRILHAS=[
@@ -211,12 +207,10 @@ const ATV=[["liga","📞","Ligações","tentativas"],["conec","✅","Conectadas"
 function defState(){
   const ts={},tn={};
   TRILHAS.forEach(t=>MESES.forEach(m=>{ts[t.id+"_"+m]=(t.id==="dir"&&m==="junho")?"concluído":"não iniciado";tn[t.id+"_"+m]="";}));
-  return{opps:"5.7",wr:"22",ts,tn,logs:{}};
+  return{opps:"",wr:"",ts,tn,logs:{}};
 }
 // S = estado global (vem da nuvem)
 let S = defState();
-// localDay = buffer local do dia atual (merge na confirmação)
-let localDay = {};
 let curDate = today();
 let curMes = "junho";
 let dayDirty = false; // tem mudança local não sincronizada?
@@ -242,12 +236,9 @@ async function cloudLoad(manual){
       const remote = JSON.parse(j.data);
       // Merge: preserva mudanças locais não confirmadas
       S = remote;
-      // Reaplica buffer local se houver algo não enviado
-      if(dayDirty && Object.keys(localDay).length){
-        S.logs = S.logs||{};
-        S.logs[curDate] = Object.assign({}, S.logs[curDate]||{}, localDay);
-      }
     }
+    // Salva backup local para próxima abertura ser instantânea
+    try{ localStorage.setItem("kubo_v5_bk", JSON.stringify(S)); }catch(e){}
     setSS("ok","Sincronizado "+fmtT());
     hideLoading();
     // Re-render a aba ativa
@@ -277,6 +268,7 @@ async function cloudMergeDay(){
         body:JSON.stringify({action:"merge_day", date:curDate, dayData})
       });
       dayDirty=false;
+      try{ localStorage.setItem("kubo_v5_bk", JSON.stringify(S)); }catch(e){}
       setSS("ok","Dia salvo "+fmtT());
     }catch(e){
       setSS("error","Falha — salvo local");
@@ -308,12 +300,8 @@ function localFallback(){
 }
 
 // ── SETUP ─────────────────────────────────────────────
-function saveURL(){
-  const url=document.getElementById("url-input").value.trim();
-  if(!url){alert("Cole a URL do Apps Script.");return;}
   SCRIPT_URL=url;
   localStorage.setItem("kubo_script_url",url);
-  document.getElementById("setup-banner").style.display="none";
   document.getElementById("loading-overlay").style.display="flex";
   cloudLoad(false);
 }
@@ -336,26 +324,18 @@ function saveURLModal(){
   st.style.display="block"; st.style.color="#1a6b3a"; st.textContent="✓ URL salva! Conectando...";
   setTimeout(()=>{
     closeSettings();
-    document.getElementById("setup-banner").style.display="none";
     cloudLoad(false);
   },800);
 }
-function clearURL(){
-  if(!confirm("Desconectar do Google Sheets? Os dados locais não serão apagados.")) return;
-  SCRIPT_URL="";
-  localStorage.removeItem("kubo_script_url");
-  closeSettings();
-  setSS("off","Desconectado");
-}
 function showSetup(){
   hideLoading();
-  document.getElementById("setup-banner").style.display="block";
+  openSettings();
   setSS("off","Não conectado");
 }
 function hideLoading(){document.getElementById("loading-overlay").style.display="none";}
 function useOffline(){
   hideLoading();
-  document.getElementById("setup-banner").style.display="none";
+  closeSettings();
   setSS("off","Modo offline");
   renderPainel(); renderDaily();
 }
@@ -576,6 +556,14 @@ function renderHist(){
     <div class="card"><div style="font-size:12px;font-weight:700;color:#1a2744;margin-bottom:10px;">Atividade diária — Lig. + Email + WPP</div><div style="display:flex;align-items:flex-end;gap:3px;height:85px;padding-top:5px;">${bars}</div></div>
     <div class="card"><div style="font-size:12px;font-weight:700;color:#1a2744;margin-bottom:8px;">Funil Acumulado — equipe</div><div style="display:flex;gap:5px;flex-wrap:wrap;">${funilH}</div></div>
     <div style="background:#fff;border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;margin-bottom:20px;"><div style="padding:10px 14px;border-bottom:1px solid #e2ddd2;font-size:12px;font-weight:700;color:#1a2744;">Log por dia</div><div style="overflow-x:auto;"><table><thead><tr>${["Data","📞","✅","📧","💬","📅","🎯","Leads","Nota"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${tblRows}</tbody></table></div></div>`;
+}
+
+  setSS("saving","Limpando...");
+  fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"reset_logs"})})
+    .then(r=>r.json())
+    .then(j=>{ if(j.ok){ setSS("ok","Histórico limpo "+fmtT()); renderHist(); }
+               else setSS("error","Erro ao limpar"); })
+    .catch(()=>setSS("error","Sem conexão"));
 }
 
 function exportCSV(){
