@@ -29,25 +29,9 @@ textarea:focus{border-color:#8B6914;}
 table{width:100%;border-collapse:collapse;font-size:11px;}
 th{text-align:left;padding:5px 8px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#aaa;border-bottom:2px solid #e2ddd2;background:#f8f6f0;}
 td{padding:5px 8px;border-bottom:1px solid #f0ede6;color:#1a1a1a;}
-#loading-overlay{position:fixed;inset:0;background:#1a2744;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:999;}
 </style>
 </head>
 <body>
-
-<!-- LOADING -->
-<div id="loading-overlay" style="display:none;">
-  <div style="font-size:20px;font-weight:800;color:#fff;">Kubo <span style="color:#c4992a;">×</span> Go2mlt</div>
-  <div style="width:32px;height:32px;border:3px solid #c4992a;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div>
-  <div id="loading-msg" style="font-size:11px;color:#8fa3c8;">Carregando...</div>
-</div>
-
-  <div style="font-size:11px;color:#5a4200;margin-bottom:10px;">Siga o arquivo <strong>LEIA_PRIMEIRO.md</strong>, crie a API gratuita no Google e cole a URL abaixo. Todos do time usam a mesma URL.</div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <input id="url-input" type="text" placeholder="https://script.google.com/macros/s/..." style="flex:1;min-width:220px;padding:7px 10px;border:1px solid #f0c040;border-radius:6px;font-size:11px;font-family:inherit;outline:none;background:#fff;color:#1a1a1a;"/>
-    <button onclick="saveURL()" style="padding:7px 14px;background:#8B6914;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Salvar e conectar</button>
-    <button onclick="useOffline()" style="padding:7px 14px;background:none;color:#888;border:1px solid #e2ddd2;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;">Usar offline</button>
-  </div>
-</div>
 
 <!-- NAV -->
 <div style="background:#1a2744;border-bottom:3px solid #8B6914;padding:0 14px;height:46px;display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:100;">
@@ -57,28 +41,9 @@ td{padding:5px 8px;border-bottom:1px solid #f0ede6;color:#1a1a1a;}
     <button class="tab" onclick="goTab('daily',this)" data-tabid="daily">📋 Daily Log</button>
     <button class="tab" onclick="goTab('hist',this)" data-tabid="hist">📈 Histórico</button>
   </div>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <div id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#aaa;flex-shrink:0;"></div>
-    <div id="sync-lbl" style="font-size:9px;color:#8fa3c8;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis;"></div>
-    <button onclick="openSettings()" title="Configurar URL do Google Sheets" style="background:rgba(255,255,255,.1);border:none;border-radius:5px;color:#8fa3c8;cursor:pointer;font-size:13px;padding:3px 7px;line-height:1;flex-shrink:0;" onmouseover="this.style.background='rgba(255,255,255,.2)'" onmouseout="this.style.background='rgba(255,255,255,.1)'">⚙️</button>
-  </div>
-</div>
-
-<!-- MODAL CONFIGURAÇÕES -->
-<div id="settings-modal" class="modal-bg" style="display:none;" onclick="if(event.target===this)closeSettings()">
-  <div class="modal" style="width:400px;" onclick="event.stopPropagation()">
-    <div style="font-size:14px;font-weight:800;color:#1a2744;margin-bottom:4px;">⚙️ Configurações</div>
-    <div style="font-size:11px;color:#aaa;margin-bottom:14px;">Conecte ao Google Sheets para sincronizar com o time</div>
-    <div style="font-size:10px;font-weight:700;color:#444;margin-bottom:6px;">URL do Google Apps Script</div>
-    <input id="url-input-modal" type="text" placeholder="https://script.google.com/macros/s/..." style="width:100%;padding:8px 10px;border:1px solid #e2ddd2;border-radius:6px;font-size:11px;font-family:inherit;outline:none;background:#f8f6f0;color:#1a1a1a;margin-bottom:8px;"/>
-    <div style="font-size:10px;color:#aaa;margin-bottom:14px;">Siga o <strong>LEIA_PRIMEIRO.md</strong> para gerar essa URL gratuitamente no Google Apps Script. Todos do time usam a mesma URL.</div>
-    <div id="url-status" style="font-size:10px;margin-bottom:12px;display:none;"></div>
-    <div style="display:flex;gap:6px;justify-content:space-between;flex-wrap:wrap;">
-      <div style="display:flex;gap:6px;">
-        <button class="ghost" onclick="closeSettings()">Cancelar</button>
-        <button class="goldbtn" onclick="saveURLModal()">Salvar e conectar</button>
-      </div>
-    </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <div id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#c4992a;animation:pulse 1s infinite;"></div>
+    <div id="sync-lbl" style="font-size:9px;color:#8fa3c8;white-space:nowrap;">Conectando...</div>
   </div>
 </div>
 
@@ -133,21 +98,17 @@ td{padding:5px 8px;border-bottom:1px solid #f0ede6;color:#1a1a1a;}
 <!-- DAILY -->
 <div id="pg-daily" class="page">
   <div style="margin-bottom:10px;margin-top:4px;"><div class="eye">Daily Log</div><div style="font-size:16px;font-weight:800;color:#1a2744;">Registro do Dia</div></div>
-
-  <!-- Banner de quem está logando -->
   <div style="background:#eef1f8;border:1px solid #c5cfe8;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <div style="font-size:10px;color:#2d3f6b;font-weight:600;">👤 Você está logando como:</div>
+    <div style="font-size:10px;color:#2d3f6b;font-weight:600;">👤 Logando como:</div>
     <input id="user-name" placeholder="Seu nome (ex: Amanda)" style="padding:4px 9px;border:1px solid #c5cfe8;border-radius:6px;font-size:11px;font-family:inherit;background:#fff;color:#1a1a1a;outline:none;width:160px;" oninput="saveUserName(this.value)"/>
-    <div style="font-size:9px;color:#8fa3c8;">Cada pessoa loga seu próprio dia — os dados se combinam automaticamente ☁️</div>
+    <div style="font-size:9px;color:#8fa3c8;">Cada pessoa loga seu dia — combina automaticamente ☁️</div>
   </div>
-
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
     <button onclick="shiftDate(-1)" style="padding:4px 9px;border:1px solid #e2ddd2;border-radius:6px;background:#f8f6f0;color:#1a1a1a;cursor:pointer;font-size:10px;font-family:inherit;">← Ant.</button>
     <input type="date" id="date-in" style="padding:4px 8px;border:1px solid #e2ddd2;border-radius:6px;font-size:11px;background:#f8f6f0;color:#1a1a1a;outline:none;font-family:inherit;" onchange="setDate(this.value)"/>
     <button onclick="setDate(today())" style="padding:4px 9px;border:none;border-radius:6px;background:#1a2744;color:#fff;cursor:pointer;font-size:10px;font-family:inherit;">Hoje</button>
     <button onclick="shiftDate(1)" style="padding:4px 9px;border:1px solid #e2ddd2;border-radius:6px;background:#f8f6f0;color:#1a1a1a;cursor:pointer;font-size:10px;font-family:inherit;">Próx. →</button>
   </div>
-
   <div class="card"><div class="eye">Atividades de Prospecção</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:7px;margin-top:8px;" id="atv-grid"></div></div>
   <div class="card"><div class="eye">Movimentação do Funil</div><div style="display:flex;gap:5px;margin-top:8px;margin-bottom:7px;flex-wrap:wrap;" id="funil-grid"></div><div style="font-size:9px;color:#aaa;">SLA: MQL 48h · SQL 30d · Aberta 90d · Demo 30d · Neg. 45d</div></div>
   <div class="card"><div class="eye">Leads Trabalhados Hoje</div><div id="leads-list" style="margin-top:8px;"></div><button onclick="addLead()" style="width:100%;padding:5px;border:1.5px dashed #e2ddd2;border-radius:5px;background:none;font-size:10px;color:#aaa;cursor:pointer;font-family:inherit;margin-top:4px;">+ Adicionar empresa</button></div>
@@ -155,7 +116,7 @@ td{padding:5px 8px;border-bottom:1px solid #f0ede6;color:#1a1a1a;}
     <div class="eye">Nota do Dia / Blockers</div>
     <textarea id="nota-ta" placeholder="O que travou? O que foi bem? Leads quentes? Insights..." rows="3" style="margin-top:6px;margin-bottom:10px;" oninput="setLog('nota',this.value)"></textarea>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-      <div id="sync-status-daily" style="font-size:9px;color:#aaa;">✦ Cada pessoa sincroniza o próprio dia — sem sobrescrever os outros</div>
+      <div style="font-size:9px;color:#aaa;">✦ Cada pessoa sincroniza seu dia — sem sobrescrever os outros</div>
       <button id="save-btn" class="navybtn" onclick="confirmSave()">☁️ Sincronizar meu dia agora</button>
     </div>
   </div>
@@ -172,7 +133,7 @@ td{padding:5px 8px;border-bottom:1px solid #f0ede6;color:#1a1a1a;}
 </div>
 
 <!-- MODAL NOTA -->
-<div id="modal" class="modal-bg" style="display:none;">
+<div id="modal" class="modal-bg" style="display:none;" onclick="if(event.target===this)closeModal()">
   <div class="modal" onclick="event.stopPropagation()">
     <div id="modal-title" style="font-size:13px;font-weight:700;color:#1a2744;margin-bottom:10px;"></div>
     <textarea id="modal-ta" rows="4" style="margin-bottom:10px;"></textarea>
@@ -184,13 +145,12 @@ td{padding:5px 8px;border-bottom:1px solid #f0ede6;color:#1a1a1a;}
 </div>
 
 <script>
-// ════════════════════════════════════════════════════
-// CONFIG — URL do Apps Script (salva por navegador)
-// ════════════════════════════════════════════════════
-// URL fixa — todos conectam automaticamente
-let SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJx11n6FkILUcT5q8rnQNDiF8smFlzOH-ZKfNR1dmm00yQcHtg5th4lpSuca5JLgzi/exec";
+// ═══════════════════════════════════════════════
+// URL FIXA — todos conectam automaticamente
+// ═══════════════════════════════════════════════
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJx11n6FkILUcT5q8rnQNDiF8smFlzOH-ZKfNR1dmm00yQcHtg5th4lpSuca5JLgzi/exec";
 
-// ── CONSTANTES ───────────────────────────────────────
+// ── CONSTANTES ──────────────────────────────────
 const TRILHAS=[
   {id:"gov",nome:"Governança & Dados",resp:"Colpani + Glauco",color:"#2d3f6b",light:"rgba(45,63,107,.09)",meses:{junho:"Tags de origem + campos BANT + padrão UTM",julho:"Dashboard único mkt × vendas + alertas de SLA",agosto:"Forecast vivo + handoff dos painéis"}},
   {id:"qual",nome:"Qualificação & Processo",resp:"Marina + Vendas",color:"#1a6b3a",light:"rgba(26,107,58,.09)",meses:{junho:"Critérios MQL/SQL (AND/NOT) + enforcement do playbook",julho:"SLA por etapa + ritual semanal de revisão de calls",agosto:"Win rate consolidado + retrospectiva"}},
@@ -203,91 +163,81 @@ const SST={"não iniciado":{bg:"#f3f4f6",color:"#6b7280",dot:"#9ca3af"},"em anda
 const FSTAGES=[{id:"open",label:"Open"},{id:"emcon",label:"Em Contato"},{id:"mql",label:"MQL"},{id:"sql",label:"SQL"},{id:"conv",label:"Convertido"}];
 const ATV=[["liga","📞","Ligações","tentativas"],["conec","✅","Conectadas","contato"],["email","📧","E-mails","enviados"],["wpp","💬","WhatsApp","msg"],["reun","📅","Reuniões","agendadas"],["demo","🎯","Demos","realizadas"]];
 
-// ── STATE ─────────────────────────────────────────────
+// ── STATE ────────────────────────────────────────
 function defState(){
   const ts={},tn={};
   TRILHAS.forEach(t=>MESES.forEach(m=>{ts[t.id+"_"+m]=(t.id==="dir"&&m==="junho")?"concluído":"não iniciado";tn[t.id+"_"+m]="";}));
   return{opps:"",wr:"",ts,tn,logs:{}};
 }
-// S = estado global (vem da nuvem)
-let S = defState();
-let curDate = today();
-let curMes = "junho";
-let dayDirty = false; // tem mudança local não sincronizada?
+let S=defState();
+let curDate=today();
+let curMes="junho";
+let dayDirty=false;
+let mergeTimer=null;
+let metaTimer=null;
 
-// ── SYNC STATUS ───────────────────────────────────────
-function setSS(state, msg){
+// ── UTILS ────────────────────────────────────────
+function today(){return new Date().toISOString().split("T")[0];}
+function addD(s,n){const d=new Date(s+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().split("T")[0];}
+function fmt(s){if(!s)return"";const[y,m,d]=s.split("-");return d+"/"+m+"/"+y;}
+function fmtT(){return new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});}
+function msLbl(ym){const[y,m]=ym.split("-");const n=["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];return n[+m]+"/"+y.slice(2);}
+function saveUserName(v){localStorage.setItem("kubo_username",v);}
+function localBackup(){try{localStorage.setItem("kubo_v5_bk",JSON.stringify(S));}catch(e){}}
+
+// ── SYNC STATUS ──────────────────────────────────
+function setSS(state,msg){
   const dot=document.getElementById("sync-dot");
   const lbl=document.getElementById("sync-lbl");
   const colors={ok:"#34d399",saving:"#c4992a",error:"#c0392b",off:"#aaa"};
   dot.style.background=colors[state]||"#aaa";
   dot.style.animation=state==="saving"?"pulse 1s infinite":"";
-  lbl.textContent=msg||"";
+  if(lbl) lbl.textContent=msg||"";
 }
 
-// ── CLOUD GET ─────────────────────────────────────────
+// ── CLOUD ────────────────────────────────────────
 async function cloudLoad(manual){
-  if(!SCRIPT_URL){if(manual)alert("Configure a URL do Apps Script primeiro.");return;}
   setSS("saving","Buscando...");
   try{
-    const r = await fetch(SCRIPT_URL+"?action=get");
-    const j = await r.json();
+    const r=await fetch(SCRIPT_URL+"?action=get");
+    const j=await r.json();
     if(j.ok && j.data && j.data!=="{}"){
-      const remote = JSON.parse(j.data);
-      // Merge: preserva mudanças locais não confirmadas
-      S = remote;
+      S=JSON.parse(j.data);
+      localBackup();
     }
-    // Salva backup local para próxima abertura ser instantânea
-    try{ localStorage.setItem("kubo_v5_bk", JSON.stringify(S)); }catch(e){}
     setSS("ok","Sincronizado "+fmtT());
-    hideLoading();
-    // Re-render a aba ativa
-    const activeTab = document.querySelector(".tab.on");
-    const tabId = activeTab ? activeTab.dataset.tabid : "painel";
-    if(tabId==="daily") renderDaily();
-    else if(tabId==="hist") renderHist();
+    const tab=document.querySelector(".tab.on");
+    const tid=tab?tab.dataset.tabid:"painel";
+    if(tid==="daily") renderDaily();
+    else if(tid==="hist") renderHist();
     else renderPainel();
   }catch(e){
     setSS("error","Sem conexão");
-    hideLoading();
-    // URL fixa — não abre settings no erro, só mostra status
   }
 }
 
-// ── CLOUD MERGE DAY (só envia o dia atual) ────────────
-let mergeTimer=null;
 async function cloudMergeDay(){
-  if(!SCRIPT_URL){localFallback();return;}
   clearTimeout(mergeTimer);
-  setSS("saving","Salvando dia...");
+  setSS("saving","Salvando...");
   mergeTimer=setTimeout(async()=>{
     try{
-      const dayData = S.logs[curDate]||{};
-      await fetch(SCRIPT_URL,{
-        method:"POST",
-        body:JSON.stringify({action:"merge_day", date:curDate, dayData})
-      });
+      const dayData=S.logs[curDate]||{};
+      await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"merge_day",date:curDate,dayData})});
       dayDirty=false;
-      try{ localStorage.setItem("kubo_v5_bk", JSON.stringify(S)); }catch(e){}
+      localBackup();
       setSS("ok","Dia salvo "+fmtT());
     }catch(e){
       setSS("error","Falha — salvo local");
-      localFallback();
+      localBackup();
     }
   },800);
 }
 
-// ── CLOUD SET META (painel de metas) ──────────────────
-let metaTimer=null;
 async function cloudSetMeta(){
-  if(!SCRIPT_URL){localFallback();return;}
   clearTimeout(metaTimer);
   metaTimer=setTimeout(async()=>{
     try{
-      await fetch(SCRIPT_URL,{
-        method:"POST",
-        body:JSON.stringify({action:"set_meta", data:{opps:S.opps,wr:S.wr,ts:S.ts,tn:S.tn}})
-      });
+      await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"set_meta",data:{opps:S.opps,wr:S.wr,ts:S.ts,tn:S.tn}})});
       setSS("ok","Salvo "+fmtT());
     }catch(e){
       setSS("error","Falha ao salvar");
@@ -295,58 +245,7 @@ async function cloudSetMeta(){
   },600);
 }
 
-function localFallback(){
-  try{localStorage.setItem("kubo_v5_bk",JSON.stringify(S));}catch(e){}
-}
-
-// ── SETUP ─────────────────────────────────────────────
-  SCRIPT_URL=url;
-  localStorage.setItem("kubo_script_url",url);
-  document.getElementById("loading-overlay").style.display="flex";
-  cloudLoad(false);
-}
-function openSettings(){
-  const inp=document.getElementById("url-input-modal");
-  if(inp) inp.value=SCRIPT_URL||"";
-  const st=document.getElementById("url-status");
-  if(st) st.style.display="none";
-  document.getElementById("settings-modal").style.display="flex";
-}
-function closeSettings(){
-  document.getElementById("settings-modal").style.display="none";
-}
-function saveURLModal(){
-  const url=document.getElementById("url-input-modal").value.trim();
-  if(!url){alert("Cole a URL do Apps Script.");return;}
-  SCRIPT_URL=url;
-  const st=document.getElementById("url-status");
-  st.style.display="block"; st.style.color="#1a6b3a"; st.textContent="✓ URL salva! Conectando...";
-  setTimeout(()=>{
-    closeSettings();
-    cloudLoad(false);
-  },800);
-}
-function showSetup(){
-  hideLoading();
-  setSS("error","Erro ao conectar — tente novamente");
-}
-function hideLoading(){document.getElementById("loading-overlay").style.display="none";}
-function useOffline(){
-  hideLoading();
-  closeSettings();
-  setSS("off","Modo offline");
-  renderPainel(); renderDaily();
-}
-
-// ── UTILS ─────────────────────────────────────────────
-function today(){return new Date().toISOString().split("T")[0];}
-function addD(s,n){const d=new Date(s+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().split("T")[0];}
-function fmt(s){if(!s)return"";const[y,m,d]=s.split("-");return d+"/"+m+"/"+y;}
-function fmtT(){return new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});}
-function msLbl(ym){const[y,m]=ym.split("-");const n=["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];return n[+m]+"/"+y.slice(2);}
-function saveUserName(v){localStorage.setItem("kubo_username",v);}
-
-// ── TABS ──────────────────────────────────────────────
+// ── TABS ─────────────────────────────────────────
 function goTab(t,btn){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById("pg-"+t).classList.add("active");
@@ -354,10 +253,10 @@ function goTab(t,btn){
   btn.classList.add("on");
   if(t==="painel") renderPainel();
   if(t==="daily")  renderDaily();
-  if(t==="hist")  { renderHist(); if(SCRIPT_URL) cloudLoad(false); }
+  if(t==="hist")   { renderHist(); cloudLoad(true); }
 }
 
-// ── PAINEL ────────────────────────────────────────────
+// ── PAINEL ───────────────────────────────────────
 function renderPainel(){
   const allK=TRILHAS.flatMap(t=>MESES.map(m=>t.id+"_"+m));
   const done=allK.filter(k=>(S.ts[k]||"")==="concluído").length;
@@ -365,38 +264,39 @@ function renderPainel(){
   document.getElementById("prog-bar").style.width=pct+"%";
   document.getElementById("prog-lbl").textContent=pct+"% entregas";
   document.getElementById("mes-tabs").innerHTML=["junho","julho","agosto"].map((v,i)=>`<button onclick="setCurMes('${v}')" style="padding:5px 12px;border-radius:14px;border:1.5px solid ${curMes===v?"#8B6914":"#e2ddd2"};background:${curMes===v?"#8B6914":"#fff"};color:${curMes===v?"#fff":"#888"};font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">${["Junho · M2","Julho · M3-M4","Agosto · M5"][i]}</button>`).join("");
-  updOpps(S.opps,true); updWR(S.wr,true);
+  updOpps(S.opps,true);
+  updWR(S.wr,true);
   renderTrilhas();
   document.getElementById("trilhas-titulo").textContent="Trilhas — "+curMes.charAt(0).toUpperCase()+curMes.slice(1);
 }
 function setCurMes(m){curMes=m;renderPainel();}
 function updOpps(v,silent){
   S.opps=v; if(!silent) cloudSetMeta();
-  const o=parseFloat(v)||0, pO=Math.min((o/14)*100,100);
-  document.getElementById("opps-disp").textContent=o;
+  const o=parseFloat(v)||0,pO=Math.min((o/14)*100,100);
+  document.getElementById("opps-disp").textContent=o||"-";
   document.getElementById("opps-bar").style.width=pO+"%";
   document.getElementById("opps-bar").style.background=o>=14?"#34d399":o>=8?"#c4992a":"#f87171";
-  document.getElementById("opps-pct").textContent=pO.toFixed(0)+"% da meta";
+  document.getElementById("opps-pct").textContent=o?pO.toFixed(0)+"% da meta":"";
   document.getElementById("opps-falta").textContent=o>=14?"✓ meta":o>0?"falta "+(14-o).toFixed(1):"";
-  const inp=document.getElementById("opps-in"); if(inp&&silent) inp.value=v;
+  const inp=document.getElementById("opps-in"); if(inp&&silent) inp.value=v||"";
 }
 function updWR(v,silent){
   S.wr=v; if(!silent) cloudSetMeta();
-  const w=parseFloat(v)||0, pW=Math.min((w/32)*100,100);
-  document.getElementById("wr-disp").textContent=w+"%";
+  const w=parseFloat(v)||0,pW=Math.min((w/32)*100,100);
+  document.getElementById("wr-disp").textContent=w?w+"%":"-";
   document.getElementById("wr-bar").style.width=pW+"%";
   document.getElementById("wr-bar").style.background=w>=28?"#1a6b3a":w>=22?"#b45309":"#c0392b";
-  document.getElementById("wr-lbl").textContent=w>=28?"✓ zona alvo":(28-w).toFixed(0)+"pp abaixo";
-  const inp=document.getElementById("wr-in"); if(inp&&silent) inp.value=v;
+  document.getElementById("wr-lbl").textContent=w>=28?"✓ zona alvo":w?(28-w).toFixed(0)+"pp abaixo":"";
+  const inp=document.getElementById("wr-in"); if(inp&&silent) inp.value=v||"";
 }
 function renderTrilhas(){
   document.getElementById("trilhas-list").innerHTML=TRILHAS.map(t=>{
-    const k=t.id+"_"+curMes, st=S.ts[k]||"não iniciado", nota=S.tn[k]||"", ss=SST[st];
+    const k=t.id+"_"+curMes,status=S.ts[k]||"não iniciado",nota=S.tn[k]||"",ss=SST[status];
     return`<div style="background:#fff;border:1px solid #e2ddd2;border-left:4px solid ${t.color};border-radius:0 8px 8px 0;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:7px;">
       <div style="flex:0 0 140px;"><div style="font-size:11px;font-weight:700;color:${t.color};">${t.nome}</div><div style="font-size:9px;color:#aaa;">${t.resp}</div></div>
       <div style="flex:1;min-width:140px;"><div style="background:${t.light};border-left:2px solid ${t.color}40;border-radius:0 5px 5px 0;padding:6px 10px;font-size:11px;color:#555;line-height:1.5;">${t.meses[curMes]}</div>${nota?`<div style="margin-top:4px;padding:3px 7px;background:#f5edd6;border-radius:4px;font-size:9px;color:#8B6914;">📝 ${nota}</div>`:""}</div>
       <div style="display:flex;align-items:center;gap:5px;">
-        <button class="stbtn" onclick="togStatus('${k}')" style="background:${ss.bg};color:${ss.color};"><span style="width:5px;height:5px;border-radius:50%;background:${ss.dot};"></span>${st}</button>
+        <button class="stbtn" onclick="togStatus('${k}')" style="background:${ss.bg};color:${ss.color};"><span style="width:5px;height:5px;border-radius:50%;background:${ss.dot};"></span>${status}</button>
         <button class="ibtn" onclick="openModal('${k}')">✎</button>
       </div>
     </div>`;
@@ -404,42 +304,36 @@ function renderTrilhas(){
 }
 function togStatus(k){const cur=S.ts[k]||"não iniciado";S.ts[k]=SLIST[(SLIST.indexOf(cur)+1)%SLIST.length];cloudSetMeta();renderTrilhas();renderPainel();}
 
-// ── MODAL ─────────────────────────────────────────────
+// ── MODAL NOTA ───────────────────────────────────
 let modalKey=null;
-function openModal(k){modalKey=k;document.getElementById("modal-title").textContent="Nota · "+k.replace("_"," — ");document.getElementById("modal-ta").value=S.tn[k]||"";document.getElementById("modal").style.display="flex";document.getElementById("modal").onclick=e=>{if(e.target===document.getElementById("modal"))closeModal();};}
+function openModal(k){
+  modalKey=k;
+  document.getElementById("modal-title").textContent="Nota · "+k.replace("_"," — ");
+  document.getElementById("modal-ta").value=S.tn[k]||"";
+  document.getElementById("modal").style.display="flex";
+}
 function closeModal(){document.getElementById("modal").style.display="none";modalKey=null;}
 function saveModal(){S.tn[modalKey]=document.getElementById("modal-ta").value;cloudSetMeta();closeModal();renderTrilhas();}
 
-// ── DAILY ─────────────────────────────────────────────
+// ── DAILY ────────────────────────────────────────
 function renderDaily(){
   document.getElementById("date-in").value=curDate;
-  const name=localStorage.getItem("kubo_username")||"";
-  document.getElementById("user-name").value=name;
+  document.getElementById("user-name").value=localStorage.getItem("kubo_username")||"";
   renderAtvGrid(); renderFunilGrid(); renderLeads(); renderNota();
 }
-function setDate(d){curDate=d; renderDaily();}
-function shiftDate(n){curDate=addD(curDate,n); renderDaily();}
-
-// Lê do estado global (já mergeado com nuvem)
+function setDate(d){curDate=d;renderDaily();}
+function shiftDate(n){curDate=addD(curDate,n);renderDaily();}
 function getLog(k){return((S.logs[curDate])||{})[k]||"";}
-
-// Escreve no estado global E marca dirty
 function setLog(k,v){
-  S.logs=S.logs||{}; S.logs[curDate]=S.logs[curDate]||{};
-  S.logs[curDate][k]=v;
-  dayDirty=true;
-  // Auto-merge silencioso com debounce
-  cloudMergeDay();
+  S.logs=S.logs||{};S.logs[curDate]=S.logs[curDate]||{};
+  S.logs[curDate][k]=v; dayDirty=true; cloudMergeDay();
 }
 function getFun(k){return(((S.logs[curDate])||{}).funil||{})[k]||"";}
 function setFun(k,v){
-  S.logs=S.logs||{}; S.logs[curDate]=S.logs[curDate]||{};
+  S.logs=S.logs||{};S.logs[curDate]=S.logs[curDate]||{};
   S.logs[curDate].funil=S.logs[curDate].funil||{};
-  S.logs[curDate].funil[k]=v;
-  dayDirty=true;
-  cloudMergeDay();
+  S.logs[curDate].funil[k]=v; dayDirty=true; cloudMergeDay();
 }
-
 function renderAtvGrid(){
   document.getElementById("atv-grid").innerHTML=ATV.map(([k,e,l,h])=>`
     <div style="background:#f8f6f0;border:1px solid #e2ddd2;border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:3px;">
@@ -449,7 +343,6 @@ function renderAtvGrid(){
       <div style="font-size:8px;color:#ccc;">${h}</div>
     </div>`).join("");
 }
-
 function renderFunilGrid(){
   document.getElementById("funil-grid").innerHTML=FSTAGES.map((s,i)=>`
     <div style="flex:1;min-width:55px;background:#f8f6f0;border:1px solid #e2ddd2;border-radius:6px;padding:6px 8px;text-align:center;position:relative;">
@@ -458,7 +351,6 @@ function renderFunilGrid(){
       ${i<FSTAGES.length-1?`<div style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);font-size:10px;color:#ccc;">→</div>`:""}
     </div>`).join("");
 }
-
 function renderLeads(){
   const leads=(S.logs[curDate]||{}).leads||[];
   const TIPOS=["outbound","inbound"],STSL=["Open","Em Contato","MQL","SQL","Conv"],TEMPS=["frio","morno","quente"];
@@ -472,11 +364,7 @@ function renderLeads(){
       <button onclick="delLead(${i})" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:12px;">✕</button>
     </div>`).join("");
 }
-
-function setLeadF(i,f,v){
-  if(!S.logs[curDate]||!S.logs[curDate].leads) return;
-  S.logs[curDate].leads[i][f]=v; dayDirty=true; cloudMergeDay();
-}
+function setLeadF(i,f,v){if(S.logs[curDate]&&S.logs[curDate].leads){S.logs[curDate].leads[i][f]=v;dayDirty=true;cloudMergeDay();}}
 function cycLead(i,f){
   const TIPOS=["outbound","inbound"],STSL=["Open","Em Contato","MQL","SQL","Conv"],TEMPS=["frio","morno","quente"];
   const lr=S.logs[curDate].leads[i];
@@ -486,38 +374,33 @@ function cycLead(i,f){
   dayDirty=true; cloudMergeDay(); renderLeads();
 }
 function addLead(){
-  S.logs=S.logs||{}; S.logs[curDate]=S.logs[curDate]||{};
+  S.logs=S.logs||{};S.logs[curDate]=S.logs[curDate]||{};
   S.logs[curDate].leads=S.logs[curDate].leads||[];
   const name=localStorage.getItem("kubo_username")||"";
   S.logs[curDate].leads.push({empresa:"",tipo:"outbound",status:"MQL",temp:"morno",user:name});
   dayDirty=true; cloudMergeDay(); renderLeads();
 }
-function delLead(i){
-  S.logs[curDate].leads.splice(i,1); dayDirty=true; cloudMergeDay(); renderLeads();
-}
-function renderNota(){const ta=document.getElementById("nota-ta"); if(ta) ta.value=getLog("nota");}
-
+function delLead(i){S.logs[curDate].leads.splice(i,1);dayDirty=true;cloudMergeDay();renderLeads();}
+function renderNota(){const ta=document.getElementById("nota-ta");if(ta)ta.value=getLog("nota");}
 function confirmSave(){
-  // Força sync imediato sem debounce
   clearTimeout(mergeTimer);
   dayDirty=false;
-  if(!SCRIPT_URL){setSS("off","Modo offline");return;}
   setSS("saving","Enviando...");
   const btn=document.getElementById("save-btn");
   const dayData=S.logs[curDate]||{};
   fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"merge_day",date:curDate,dayData})})
     .then(r=>r.json())
     .then(j=>{
-      if(j.ok){setSS("ok","Sincronizado "+fmtT());btn.textContent="✓ Enviado!";btn.style.background="#1a6b3a";}
-      else{setSS("error","Erro no servidor");}
+      if(j.ok){localBackup();setSS("ok","Sincronizado "+fmtT());btn.textContent="✓ Enviado!";btn.style.background="#1a6b3a";}
+      else setSS("error","Erro no servidor");
       setTimeout(()=>{btn.textContent="☁️ Sincronizar meu dia agora";btn.style.background="#1a2744";},2000);
     })
-    .catch(()=>{setSS("error","Sem conexão");localFallback();});
+    .catch(()=>{setSS("error","Sem conexão");localBackup();});
 }
 
-// ── HISTÓRICO ─────────────────────────────────────────
+// ── HISTÓRICO ────────────────────────────────────
 function renderHist(){
-  const logs=S.logs||{}, hoje=today(), ma=hoje.slice(0,7);
+  const logs=S.logs||{},hoje=today(),ma=hoje.slice(0,7);
   const allDates=Object.keys(logs).sort();
   const filtered=allDates.map(d=>({date:d,...logs[d]}));
   const meses=[addD(hoje,-60).slice(0,7),addD(hoje,-30).slice(0,7),ma].filter((v,i,a)=>a.indexOf(v)===i);
@@ -529,8 +412,8 @@ function renderHist(){
   const totL=filtered.reduce((s,d)=>s+(d.leads||[]).length,0);
   const rec=filtered.slice(-14);
   const maxV=Math.max(...rec.map(d=>(parseInt(d.liga)||0)+(parseInt(d.email)||0)+(parseInt(d.wpp)||0)),1);
-  const funil={}; FSTAGES.forEach(s=>funil[s.id]=0);
-  filtered.forEach(d=>{if(d.funil) FSTAGES.forEach(s=>funil[s.id]+=(parseInt(d.funil[s.id])||0));});
+  const funil={};FSTAGES.forEach(s=>funil[s.id]=0);
+  filtered.forEach(d=>{if(d.funil)FSTAGES.forEach(s=>funil[s.id]+=(parseInt(d.funil[s.id])||0));});
   const pipeMeses=meses.map(ym=>{const p=calcPipe(ym),ia=ym===ma,sp=sem(p,14,8),pp=Math.min((p/14)*100,100);return`<div style="background:${ia?"rgba(196,153,42,.12)":"rgba(255,255,255,.05)"};border:1px solid ${ia?"rgba(196,153,42,.3)":"rgba(255,255,255,.08)"};border-radius:7px;padding:11px 12px;"><div style="font-size:8px;font-weight:700;color:#8fa3c8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">${msLbl(ym)}${ia?`<span style="font-size:7px;background:#c4992a;color:#fff;padding:1px 5px;border-radius:5px;">ATUAL</span>`:""}</div><div style="font-size:24px;font-weight:900;color:#fff;">${p}</div><div style="font-size:8px;color:#8fa3c8;margin-bottom:6px;">conversões · meta:14</div><div style="height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;margin-bottom:5px;"><div style="width:${pp}%;height:100%;background:${sp.cl};border-radius:2px;"></div></div><div style="display:inline-flex;font-size:8px;font-weight:700;padding:2px 7px;border-radius:8px;background:${sp.bg};color:${sp.cl};">${sp.txt}</div></div>`;}).join("");
   const stats=[["Ligações",tot("liga"),"tentativas"],["Conectadas",tot("conec"),"contato"],["E-mails",tot("email"),"enviados"],["WhatsApp",tot("wpp"),"msg"],["Reuniões",tot("reun"),"agendadas"],["Demos",tot("demo"),"realizadas"],["Leads",totL,"trabalhados"],["Dias",filtered.length,"com log"]].map(([l,v,s])=>`<div style="background:#fff;border:1px solid #e2ddd2;border-radius:9px;padding:10px 12px;"><div style="font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#aaa;margin-bottom:3px;">${l}</div><div style="font-size:20px;font-weight:900;color:#1a2744;">${v}</div><div style="font-size:8px;color:#aaa;margin-top:2px;">${s}</div></div>`).join("");
   const bars=rec.length?rec.map(d=>{const v=(parseInt(d.liga)||0)+(parseInt(d.email)||0)+(parseInt(d.wpp)||0);const h=Math.max((v/maxV)*70,3);return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">${v>0?`<div style="font-size:7px;color:#555;font-weight:600;">${v}</div>`:""}<div style="width:100%;height:${h}px;background:#1a2744;border-radius:2px 2px 0 0;min-height:3px;"></div><div style="font-size:7px;color:#aaa;font-weight:600;white-space:nowrap;">${fmt(d.date).slice(0,5)}</div></div>`;}).join(""):`<div style="color:#aaa;font-size:11px;padding:14px;text-align:center;width:100%;">Nenhum dado ainda.</div>`;
@@ -556,30 +439,24 @@ function renderHist(){
     <div style="background:#fff;border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;margin-bottom:20px;"><div style="padding:10px 14px;border-bottom:1px solid #e2ddd2;font-size:12px;font-weight:700;color:#1a2744;">Log por dia</div><div style="overflow-x:auto;"><table><thead><tr>${["Data","📞","✅","📧","💬","📅","🎯","Leads","Nota"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${tblRows}</tbody></table></div></div>`;
 }
 
-  setSS("saving","Limpando...");
-  fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify({action:"reset_logs"})})
-    .then(r=>r.json())
-    .then(j=>{ if(j.ok){ setSS("ok","Histórico limpo "+fmtT()); renderHist(); }
-               else setSS("error","Erro ao limpar"); })
-    .catch(()=>setSS("error","Sem conexão"));
-}
-
 function exportCSV(){
-  const logs=S.logs||{}, hoje=today();
+  const logs=S.logs||{},hoje=today();
   const filtered=Object.keys(logs).sort().map(d=>({date:d,...logs[d]}));
   const rows=[["Data","Lig","Conec","Email","WPP","Reun","Demo","Leads","Nota"]];
   filtered.forEach(d=>rows.push([d.date,d.liga||0,d.conec||0,d.email||0,d.wpp||0,d.reun||0,d.demo||0,(d.leads||[]).length,(d.nota||"").replace(/,/g,";")]));
-  const a=document.createElement("a"); a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(rows.map(r=>r.join(",")).join("\n")); a.download="kubo_"+hoje+".csv"; a.click();
+  const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(rows.map(r=>r.join(",")).join("\n"));a.download="kubo_"+hoje+".csv";a.click();
 }
 
-// ── INIT ──────────────────────────────────────────────
-if(SCRIPT_URL){
-  cloudLoad(false);
-} else {
-  showSetup();
-}
-// Re-fetch a cada 60s (sem sobrescrever)
-setInterval(()=>{ if(SCRIPT_URL && !dayDirty) cloudLoad(false); }, 60000);
+// ── INIT ─────────────────────────────────────────
+// Carrega cache local imediatamente (abertura instantânea)
+const _bk=localStorage.getItem("kubo_v5_bk");
+if(_bk){try{S=JSON.parse(_bk);}catch(e){}}
+renderPainel();
+renderDaily();
+// Sincroniza com Google em background
+cloudLoad(false);
+// Re-sync a cada 60s
+setInterval(()=>{if(!dayDirty)cloudLoad(false);},60000);
 </script>
 </body>
 </html>
